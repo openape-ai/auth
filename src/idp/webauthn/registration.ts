@@ -32,14 +32,14 @@ export async function createRegistrationOptions(
     rpID: rpConfig.rpID,
     userName: email,
     userDisplayName: name,
-    attestationType: 'none',
+    attestationType: rpConfig.attestationType || 'none',
     excludeCredentials: existingCredentials.map(c => ({
       id: c.credentialId,
       transports: c.transports,
     })),
     authenticatorSelection: {
-      residentKey: 'preferred',
-      userVerification: 'preferred',
+      residentKey: rpConfig.residentKey || 'preferred',
+      userVerification: rpConfig.requireUserVerification ? 'required' : 'preferred',
     },
   })
 
@@ -60,7 +60,7 @@ export async function verifyRegistration(
     expectedChallenge,
     expectedOrigin: rpConfig.origin,
     expectedRPID: rpConfig.rpID,
-    requireUserVerification: false,
+    requireUserVerification: rpConfig.requireUserVerification ?? false,
   })
 
   if (!verification.verified || !verification.registrationInfo) {

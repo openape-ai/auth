@@ -9,7 +9,7 @@ export async function createAuthenticationOptions(
 ): Promise<{ options: PublicKeyCredentialRequestOptionsJSON, challenge: string }> {
   const options = await generateAuthenticationOptions({
     rpID: rpConfig.rpID,
-    userVerification: 'preferred',
+    userVerification: rpConfig.requireUserVerification ? 'required' : 'preferred',
     allowCredentials: credentials?.map(c => ({
       id: c.credentialId,
       transports: c.transports,
@@ -33,7 +33,7 @@ export async function verifyAuthentication(
     expectedChallenge,
     expectedOrigin: rpConfig.origin,
     expectedRPID: rpConfig.rpID,
-    requireUserVerification: false,
+    requireUserVerification: rpConfig.requireUserVerification ?? false,
     credential: {
       id: credential.credentialId,
       publicKey: base64URLToUint8Array(credential.publicKey),
