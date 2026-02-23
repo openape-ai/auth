@@ -34,6 +34,8 @@
   },
   "dependencies": {
     "@openape/core": "workspace:*",
+    "@simplewebauthn/server": "^11",
+    "@simplewebauthn/types": "^11",
     "jose": "^5.9.0"
   },
   "devDependencies": {
