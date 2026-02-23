@@ -42,6 +42,7 @@ describe('handleTokenExchange', () => {
     expect(payload.iss).toBe('https://idp.example.com')
     expect(payload.sub).toBe('alice@example.com')
     expect(payload.aud).toBe('sp.example.com')
+    expect(payload.act).toBe('human')
     expect(payload.nonce).toBe('test-nonce')
   })
 

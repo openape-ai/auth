@@ -1,4 +1,4 @@
-import type { DDISAAssertionClaims } from '@openape/core'
+import type { ActorType, DDISAAssertionClaims } from '@openape/core'
 import type { JWTPayload } from 'jose'
 import type { CodeStore, KeyStore } from './stores.js'
 import { generateCodeChallenge, signJWT } from '@openape/core'
@@ -72,7 +72,7 @@ export async function handleTokenExchange(
  * Create and sign an assertion JWT.
  */
 export async function issueAssertion(
-  claims: { sub: string, aud: string, nonce: string },
+  claims: { sub: string, aud: string, nonce: string, act?: ActorType },
   keyStore: KeyStore,
   issuer: string,
 ): Promise<string> {
@@ -83,6 +83,7 @@ export async function issueAssertion(
     iss: issuer,
     sub: claims.sub,
     aud: claims.aud,
+    act: claims.act ?? 'human',
     iat: now,
     exp: now + 300, // 5 minutes max
     nonce: claims.nonce,
