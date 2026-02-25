@@ -1,6 +1,6 @@
 # @openape/auth
 
-OpenAPE authentication: IdP + SP OIDC protocol logic.
+OpenApe authentication: IdP + SP OIDC protocol logic.
 
 ## Installation
 
