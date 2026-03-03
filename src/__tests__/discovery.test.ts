@@ -18,4 +18,29 @@ describe('discoverIdP', () => {
     const config = await discoverIdP('bob@unknown.com', { mockRecords })
     expect(config).toBeNull()
   })
+
+  it('uses fallbackIdpUrl when no DNS record found', async () => {
+    const config = await discoverIdP('bob@unknown.com', {
+      mockRecords,
+      fallbackIdpUrl: 'https://id.openape.at',
+    })
+    expect(config).not.toBeNull()
+    expect(config!.idpUrl).toBe('https://id.openape.at')
+    expect(config!.record.version).toBe('ddisa1')
+    expect(config!.record.idp).toBe('https://id.openape.at')
+  })
+
+  it('prefers DNS record over fallback', async () => {
+    const config = await discoverIdP('alice@example.com', {
+      mockRecords,
+      fallbackIdpUrl: 'https://id.openape.at',
+    })
+    expect(config).not.toBeNull()
+    expect(config!.idpUrl).toBe('https://idp.example.com')
+  })
+
+  it('returns null without fallback for unknown domain', async () => {
+    const config = await discoverIdP('bob@unknown.com', { mockRecords })
+    expect(config).toBeNull()
+  })
 })

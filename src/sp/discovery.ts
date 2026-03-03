@@ -12,10 +12,21 @@ export interface IdPConfig {
  */
 export async function discoverIdP(
   email: string,
-  options?: ResolverOptions,
+  options?: ResolverOptions & { fallbackIdpUrl?: string },
 ): Promise<IdPConfig | null> {
   const domain = extractDomain(email)
   const record = await resolveDDISA(domain, options)
+
+  if (!record && options?.fallbackIdpUrl) {
+    return {
+      idpUrl: options.fallbackIdpUrl,
+      record: {
+        version: 'ddisa1',
+        idp: options.fallbackIdpUrl,
+        raw: `v=ddisa1 idp=${options.fallbackIdpUrl}`,
+      },
+    }
+  }
 
   if (!record)
     return null
