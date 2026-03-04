@@ -1,3 +1,4 @@
+import type { ActorType } from '@openape/core'
 import type { KeyLike } from 'jose'
 
 export interface CodeEntry {
@@ -8,6 +9,7 @@ export interface CodeEntry {
   userId: string
   nonce: string
   expiresAt: number
+  act?: ActorType
 }
 
 export interface ConsentEntry {

@@ -60,6 +60,7 @@ export async function handleTokenExchange(
       sub: codeEntry.userId,
       aud: params.sp_id,
       nonce: codeEntry.nonce,
+      act: codeEntry.act,
     },
     keyStore,
     issuer,
