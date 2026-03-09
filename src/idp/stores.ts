@@ -42,6 +42,11 @@ export interface KeyStore {
   getAllPublicKeys: () => Promise<KeyEntry[]>
 }
 
+export interface JtiStore {
+  hasBeenUsed: (jti: string) => Promise<boolean>
+  markUsed: (jti: string, ttlMs: number) => Promise<void>
+}
+
 // In-memory implementations
 
 export class InMemoryCodeStore implements CodeStore {
@@ -80,6 +85,28 @@ export class InMemoryConsentStore implements ConsentStore {
 
   async save(entry: ConsentEntry): Promise<void> {
     this.consents.set(this.key(entry.userId, entry.spId), entry)
+  }
+}
+
+export class InMemoryJtiStore implements JtiStore {
+  private usedJtis = new Map<string, number>()
+
+  async hasBeenUsed(jti: string): Promise<boolean> {
+    this.cleanup()
+    return this.usedJtis.has(jti)
+  }
+
+  async markUsed(jti: string, ttlMs: number): Promise<void> {
+    this.usedJtis.set(jti, Date.now() + ttlMs)
+  }
+
+  private cleanup(): void {
+    const now = Date.now()
+    for (const [jti, expiresAt] of this.usedJtis) {
+      if (expiresAt < now) {
+        this.usedJtis.delete(jti)
+      }
+    }
   }
 }
 

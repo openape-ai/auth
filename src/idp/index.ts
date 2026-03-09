@@ -1,4 +1,5 @@
 export { type AuthorizeParams, type AuthorizeResult, evaluatePolicy, validateAuthorizeRequest } from './authorize.js'
+export { type AgentKeyResolver, type ClientAssertionResult, validateClientAssertion } from './client-assertion.js'
 export { generateJWKS, type JWKSResponse, serveJWKS } from './jwks.js'
 export {
   type CodeEntry,
@@ -7,7 +8,9 @@ export {
   type ConsentStore,
   InMemoryCodeStore,
   InMemoryConsentStore,
+  InMemoryJtiStore,
   InMemoryKeyStore,
+  type JtiStore,
   type KeyEntry,
   type KeyStore,
 } from './stores.js'
