@@ -1,4 +1,4 @@
-import type { ActorType, DDISAAssertionClaims, DDISADelegateClaim, OpenApeAuthorizationDetail } from '@openape/core'
+import type { ActorType, DDISAAssertionClaims, DDISADelegateClaim, DelegationActClaim, OpenApeAuthorizationDetail } from '@openape/core'
 import type { JWTPayload } from 'jose'
 import type { CodeStore, KeyStore, RefreshTokenStore } from './stores.js'
 import { generateCodeChallenge, signJWT } from '@openape/core'
@@ -83,6 +83,8 @@ export async function handleTokenExchange(
       email: extraClaims.email,
       name: extraClaims.name,
       authorization_details: codeEntry.authorizationDetails,
+      delegation_act: codeEntry.delegationAct,
+      delegation_grant: codeEntry.delegationGrant,
     },
     keyStore,
     issuer,
@@ -111,11 +113,26 @@ export async function handleTokenExchange(
   return result
 }
 
+export interface AssertionClaimsInput {
+  sub: string
+  aud: string
+  nonce: string
+  act?: ActorType
+  delegate?: DDISADelegateClaim
+  email?: string
+  name?: string
+  authorization_details?: OpenApeAuthorizationDetail[]
+  /** RFC 8693 delegation: the actual actor */
+  delegation_act?: DelegationActClaim
+  /** Delegation grant ID */
+  delegation_grant?: string
+}
+
 /**
  * Create and sign an assertion JWT.
  */
 export async function issueAssertion(
-  claims: { sub: string, aud: string, nonce: string, act?: ActorType, delegate?: DDISADelegateClaim, email?: string, name?: string, authorization_details?: OpenApeAuthorizationDetail[] },
+  claims: AssertionClaimsInput,
   keyStore: KeyStore,
   issuer: string,
 ): Promise<string> {
@@ -126,11 +143,15 @@ export async function issueAssertion(
     iss: issuer,
     sub: claims.sub,
     aud: claims.aud,
-    act: claims.act ?? 'human',
+    act: claims.delegation_act ?? claims.act ?? 'human',
     iat: now,
     exp: now + 300, // 5 minutes max
     nonce: claims.nonce,
     jti: crypto.randomUUID(),
+  }
+
+  if (claims.delegation_grant) {
+    payload.delegation_grant = claims.delegation_grant
   }
 
   if (claims.delegate) {

@@ -474,4 +474,99 @@ describe('issueAssertion', () => {
     const { payload } = await verifyJWT(assertion, key.publicKey)
     expect(payload.authorization_details).toBeUndefined()
   })
+
+  it('issues delegation token with act claim (rfc 8693)', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      {
+        sub: 'patrick@hofmann.eco',
+        aud: 'bank.example.com',
+        nonce: 'n',
+        delegation_act: { sub: 'agent+patrick@id.openape.at' },
+        delegation_grant: 'del-abc123',
+      },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.sub).toBe('patrick@hofmann.eco')
+    expect(payload.act).toEqual({ sub: 'agent+patrick@id.openape.at' })
+    expect(payload.delegation_grant).toBe('del-abc123')
+  })
+
+  it('delegation_act overrides act field', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      {
+        sub: 'patrick@hofmann.eco',
+        aud: 'sp.example.com',
+        nonce: 'n',
+        act: 'agent',
+        delegation_act: { sub: 'lisa@firma.at' },
+        delegation_grant: 'del-xyz',
+      },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.act).toEqual({ sub: 'lisa@firma.at' })
+  })
+
+  it('omits delegation_grant when not provided', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n' },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.delegation_grant).toBeUndefined()
+  })
+
+  it('passes delegation through token exchange', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    await codeStore.save({
+      code: 'delegation-code',
+      spId: 'bank.example.com',
+      redirectUri: 'https://bank.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'patrick@hofmann.eco',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+      delegationAct: { sub: 'agent+patrick@id.openape.at' },
+      delegationGrant: 'del-abc123',
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'delegation-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://bank.example.com/callback',
+        sp_id: 'bank.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
+    expect(payload.sub).toBe('patrick@hofmann.eco')
+    expect(payload.act).toEqual({ sub: 'agent+patrick@id.openape.at' })
+    expect(payload.delegation_grant).toBe('del-abc123')
+  })
 })
