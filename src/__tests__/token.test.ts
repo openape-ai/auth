@@ -1,4 +1,4 @@
-import type { DDISADelegateClaim } from '@openape/core'
+import type { DDISADelegateClaim, OpenApeAuthorizationDetail } from '@openape/core'
 import { generateCodeChallenge, generateCodeVerifier, verifyJWT } from '@openape/core'
 import { describe, expect, it } from 'vitest'
 import { InMemoryCodeStore, InMemoryKeyStore } from '../idp/stores.js'
@@ -257,6 +257,127 @@ describe('handleTokenExchange', () => {
   })
 })
 
+describe('authorization_details (RFC 9396)', () => {
+  it('includes authorization_details in token response when present in code entry', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    const details: OpenApeAuthorizationDetail[] = [
+      { type: 'openape_grant', action: 'Transfer:Create', approval: 'once', grant_id: 'grant-abc' },
+    ]
+
+    await codeStore.save({
+      code: 'authz-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+      authorizationDetails: details,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'authz-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    // Token response includes authorization_details
+    expect(result.authorization_details).toEqual(details)
+
+    // JWT also includes authorization_details claim
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
+    expect(payload.authorization_details).toEqual(details)
+  })
+
+  it('omits authorization_details from response when not present in code entry', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    await codeStore.save({
+      code: 'no-authz-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'no-authz-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    expect(result.authorization_details).toBeUndefined()
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
+    expect(payload.authorization_details).toBeUndefined()
+  })
+
+  it('includes multiple authorization_details entries', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    const details: OpenApeAuthorizationDetail[] = [
+      { type: 'openape_grant', action: 'Transfer:Create', approval: 'once', grant_id: 'g1' },
+      { type: 'openape_grant', action: 'Account:Read', approval: 'always', grant_id: 'g2' },
+    ]
+
+    await codeStore.save({
+      code: 'multi-authz',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+      authorizationDetails: details,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'multi-authz',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    expect(result.authorization_details).toHaveLength(2)
+    expect(result.authorization_details![0].action).toBe('Transfer:Create')
+    expect(result.authorization_details![1].action).toBe('Account:Read')
+  })
+})
+
 describe('issueAssertion', () => {
   it('issues assertion without delegate by default', async () => {
     const keyStore = new InMemoryKeyStore()
@@ -321,5 +442,36 @@ describe('issueAssertion', () => {
     const key = await keyStore.getSigningKey()
     const { protectedHeader } = await verifyJWT(assertion, key.publicKey)
     expect(protectedHeader.kid).toBe(key.kid)
+  })
+
+  it('includes authorization_details claim when provided', async () => {
+    const keyStore = new InMemoryKeyStore()
+    const details: OpenApeAuthorizationDetail[] = [
+      { type: 'openape_grant', action: 'Transfer:Create', approval: 'once', grant_id: 'g1' },
+    ]
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n', authorization_details: details },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.authorization_details).toEqual(details)
+  })
+
+  it('omits authorization_details from JWT when not provided', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n' },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.authorization_details).toBeUndefined()
   })
 })

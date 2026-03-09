@@ -1,4 +1,4 @@
-import type { ActorType, DDISAAssertionClaims, DDISADelegateClaim } from '@openape/core'
+import type { ActorType, DDISAAssertionClaims, DDISADelegateClaim, OpenApeAuthorizationDetail } from '@openape/core'
 import type { JWTPayload } from 'jose'
 import type { CodeStore, KeyStore, RefreshTokenStore } from './stores.js'
 import { generateCodeChallenge, signJWT } from '@openape/core'
@@ -18,6 +18,7 @@ export interface TokenExchangeResult {
   expires_in: number
   assertion: string
   refresh_token?: string
+  authorization_details?: OpenApeAuthorizationDetail[]
 }
 
 export interface UserClaimsResolver {
@@ -81,6 +82,7 @@ export async function handleTokenExchange(
       delegate: codeEntry.delegate,
       email: extraClaims.email,
       name: extraClaims.name,
+      authorization_details: codeEntry.authorizationDetails,
     },
     keyStore,
     issuer,
@@ -92,6 +94,11 @@ export async function handleTokenExchange(
     token_type: 'Bearer',
     expires_in: 300,
     assertion,
+  }
+
+  // Include authorization_details in token response
+  if (codeEntry.authorizationDetails?.length) {
+    result.authorization_details = codeEntry.authorizationDetails
   }
 
   // Generate refresh token if offline_access scope requested
@@ -108,14 +115,14 @@ export async function handleTokenExchange(
  * Create and sign an assertion JWT.
  */
 export async function issueAssertion(
-  claims: { sub: string, aud: string, nonce: string, act?: ActorType, delegate?: DDISADelegateClaim, email?: string, name?: string },
+  claims: { sub: string, aud: string, nonce: string, act?: ActorType, delegate?: DDISADelegateClaim, email?: string, name?: string, authorization_details?: OpenApeAuthorizationDetail[] },
   keyStore: KeyStore,
   issuer: string,
 ): Promise<string> {
   const key = await keyStore.getSigningKey()
   const now = Math.floor(Date.now() / 1000)
 
-  const payload: DDISAAssertionClaims & { email?: string, name?: string } = {
+  const payload: DDISAAssertionClaims & { email?: string, name?: string, authorization_details?: OpenApeAuthorizationDetail[] } = {
     iss: issuer,
     sub: claims.sub,
     aud: claims.aud,
@@ -136,6 +143,10 @@ export async function issueAssertion(
 
   if (claims.name) {
     payload.name = claims.name
+  }
+
+  if (claims.authorization_details?.length) {
+    payload.authorization_details = claims.authorization_details
   }
 
   return signJWT(payload as unknown as JWTPayload, key.privateKey, { kid: key.kid })

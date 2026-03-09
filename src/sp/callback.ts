@@ -1,4 +1,4 @@
-import type { AuthFlowState, DDISAAssertionClaims } from '@openape/core'
+import type { AuthFlowState, DDISAAssertionClaims, OpenApeAuthorizationDetail } from '@openape/core'
 import type { KeyLike } from 'jose'
 import { validateAssertion, WELL_KNOWN_JWKS } from '@openape/core'
 
@@ -20,6 +20,7 @@ export interface HandleCallbackOptions {
 export interface CallbackResult {
   claims: DDISAAssertionClaims
   rawAssertion: string
+  authorizationDetails?: OpenApeAuthorizationDetail[]
 }
 
 /**
@@ -52,7 +53,7 @@ export async function handleCallback(options: HandleCallbackOptions): Promise<Ca
     throw new Error(`Token exchange failed: ${response.status} ${body}`)
   }
 
-  const data = await response.json() as { assertion: string }
+  const data = await response.json() as { assertion: string, authorization_details?: OpenApeAuthorizationDetail[] }
   const rawAssertion = data.assertion
 
   // 3. Validate the assertion
@@ -69,5 +70,9 @@ export async function handleCallback(options: HandleCallbackOptions): Promise<Ca
     throw new Error(`Assertion validation failed: ${result.error}`)
   }
 
-  return { claims: result.claims, rawAssertion }
+  return {
+    claims: result.claims,
+    rawAssertion,
+    authorizationDetails: data.authorization_details,
+  }
 }

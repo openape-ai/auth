@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import type { ActorType, DDISADelegateClaim } from '@openape/core'
+import type { ActorType, DDISADelegateClaim, OpenApeAuthorizationDetail } from '@openape/core'
 import type { KeyLike } from 'jose'
 
 export interface CodeEntry {
@@ -13,6 +13,7 @@ export interface CodeEntry {
   act?: ActorType
   delegate?: DDISADelegateClaim
   scope?: string
+  authorizationDetails?: OpenApeAuthorizationDetail[]
 }
 
 export interface ConsentEntry {
