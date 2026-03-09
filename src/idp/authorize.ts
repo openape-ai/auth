@@ -9,6 +9,7 @@ export interface AuthorizeParams {
   code_challenge_method: string
   nonce: string
   response_type: string
+  scope?: string
 }
 
 export interface AuthorizeResult {

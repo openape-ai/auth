@@ -1,4 +1,4 @@
-import type { ActorType, DDISAAssertionClaims } from '@openape/core'
+import type { ActorType, DDISAAssertionClaims, DDISADelegateClaim } from '@openape/core'
 import type { JWTPayload } from 'jose'
 import type { CodeStore, KeyStore } from './stores.js'
 import { generateCodeChallenge, signJWT } from '@openape/core'
@@ -12,7 +12,15 @@ export interface TokenExchangeParams {
 }
 
 export interface TokenExchangeResult {
+  id_token: string
+  access_token: string
+  token_type: string
+  expires_in: number
   assertion: string
+}
+
+export interface UserClaimsResolver {
+  (userId: string, scope?: string): Promise<{ email?: string, name?: string }>
 }
 
 /**
@@ -23,6 +31,7 @@ export async function handleTokenExchange(
   codeStore: CodeStore,
   keyStore: KeyStore,
   issuer: string,
+  resolveUserClaims?: UserClaimsResolver,
 ): Promise<TokenExchangeResult> {
   // Validate grant_type
   if (params.grant_type !== 'authorization_code') {
@@ -54,6 +63,12 @@ export async function handleTokenExchange(
   // Delete the code (single use)
   await codeStore.delete(params.code)
 
+  // Resolve user claims based on scope
+  let extraClaims: { email?: string, name?: string } = {}
+  if (resolveUserClaims) {
+    extraClaims = await resolveUserClaims(codeEntry.userId, codeEntry.scope)
+  }
+
   // Issue assertion
   const assertion = await issueAssertion(
     {
@@ -61,26 +76,35 @@ export async function handleTokenExchange(
       aud: params.sp_id,
       nonce: codeEntry.nonce,
       act: codeEntry.act,
+      delegate: codeEntry.delegate,
+      email: extraClaims.email,
+      name: extraClaims.name,
     },
     keyStore,
     issuer,
   )
 
-  return { assertion }
+  return {
+    id_token: assertion,
+    access_token: assertion,
+    token_type: 'Bearer',
+    expires_in: 300,
+    assertion,
+  }
 }
 
 /**
  * Create and sign an assertion JWT.
  */
 export async function issueAssertion(
-  claims: { sub: string, aud: string, nonce: string, act?: ActorType },
+  claims: { sub: string, aud: string, nonce: string, act?: ActorType, delegate?: DDISADelegateClaim, email?: string, name?: string },
   keyStore: KeyStore,
   issuer: string,
 ): Promise<string> {
   const key = await keyStore.getSigningKey()
   const now = Math.floor(Date.now() / 1000)
 
-  const payload: DDISAAssertionClaims = {
+  const payload: DDISAAssertionClaims & { email?: string, name?: string } = {
     iss: issuer,
     sub: claims.sub,
     aud: claims.aud,
@@ -89,6 +113,18 @@ export async function issueAssertion(
     exp: now + 300, // 5 minutes max
     nonce: claims.nonce,
     jti: crypto.randomUUID(),
+  }
+
+  if (claims.delegate) {
+    payload.delegate = claims.delegate
+  }
+
+  if (claims.email) {
+    payload.email = claims.email
+  }
+
+  if (claims.name) {
+    payload.name = claims.name
   }
 
   return signJWT(payload as unknown as JWTPayload, key.privateKey, { kid: key.kid })

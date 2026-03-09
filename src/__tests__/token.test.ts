@@ -1,10 +1,11 @@
+import type { DDISADelegateClaim } from '@openape/core'
 import { generateCodeChallenge, generateCodeVerifier, verifyJWT } from '@openape/core'
 import { describe, expect, it } from 'vitest'
 import { InMemoryCodeStore, InMemoryKeyStore } from '../idp/stores.js'
-import { handleTokenExchange } from '../idp/token.js'
+import { handleTokenExchange, issueAssertion } from '../idp/token.js'
 
 describe('handleTokenExchange', () => {
-  it('exchanges a valid code for an assertion', async () => {
+  it('exchanges a valid code for OIDC token response', async () => {
     const codeStore = new InMemoryCodeStore()
     const keyStore = new InMemoryKeyStore()
     const verifier = generateCodeVerifier()
@@ -33,17 +34,59 @@ describe('handleTokenExchange', () => {
       'https://idp.example.com',
     )
 
-    expect(result.assertion).toBeTruthy()
-    expect(result.assertion.split('.')).toHaveLength(3)
+    // OIDC response format
+    expect(result.id_token).toBeTruthy()
+    expect(result.access_token).toBeTruthy()
+    expect(result.token_type).toBe('Bearer')
+    expect(result.expires_in).toBe(300)
 
-    // Verify the assertion contents
+    // Backwards compatibility
+    expect(result.assertion).toBeTruthy()
+    expect(result.assertion).toBe(result.id_token)
+
+    // Verify the JWT contents
     const key = await keyStore.getSigningKey()
-    const { payload } = await verifyJWT(result.assertion, key.publicKey)
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
     expect(payload.iss).toBe('https://idp.example.com')
     expect(payload.sub).toBe('alice@example.com')
     expect(payload.aud).toBe('sp.example.com')
     expect(payload.act).toBe('human')
     expect(payload.nonce).toBe('test-nonce')
+  })
+
+  it('includes kid in JWT header', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    await codeStore.save({
+      code: 'kid-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'kid-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { protectedHeader } = await verifyJWT(result.id_token, key.publicKey)
+    expect(protectedHeader.kid).toBe(key.kid)
+    expect(protectedHeader.alg).toBe('ES256')
   })
 
   it('rejects invalid code', async () => {
@@ -92,5 +135,191 @@ describe('handleTokenExchange', () => {
       keyStore,
       'https://idp',
     )).rejects.toThrow('PKCE')
+  })
+
+  it('includes delegate claim in assertion when code entry has delegate', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    const delegate: DDISADelegateClaim = {
+      sub: 'agent@idp.example.com',
+      act: 'agent',
+      grant_id: 'grant-123',
+    }
+
+    await codeStore.save({
+      code: 'delegate-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'delegate-nonce',
+      expiresAt: Date.now() + 60000,
+      delegate,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'delegate-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.assertion, key.publicKey)
+    expect(payload.sub).toBe('alice@example.com')
+    expect(payload.act).toBe('human')
+    expect(payload.delegate).toEqual(delegate)
+  })
+
+  it('resolves user claims based on scope via callback', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    await codeStore.save({
+      code: 'scope-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+      scope: 'openid email profile',
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'scope-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+      async (userId, scope) => {
+        expect(userId).toBe('alice@example.com')
+        expect(scope).toBe('openid email profile')
+        return { email: 'alice@example.com', name: 'Alice' }
+      },
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
+    expect(payload.email).toBe('alice@example.com')
+    expect(payload.name).toBe('Alice')
+  })
+
+  it('does not include email/name without resolver', async () => {
+    const codeStore = new InMemoryCodeStore()
+    const keyStore = new InMemoryKeyStore()
+    const verifier = generateCodeVerifier()
+    const challenge = await generateCodeChallenge(verifier)
+
+    await codeStore.save({
+      code: 'no-scope-code',
+      spId: 'sp.example.com',
+      redirectUri: 'https://sp.example.com/callback',
+      codeChallenge: challenge,
+      userId: 'alice@example.com',
+      nonce: 'n',
+      expiresAt: Date.now() + 60000,
+    })
+
+    const result = await handleTokenExchange(
+      {
+        grant_type: 'authorization_code',
+        code: 'no-scope-code',
+        code_verifier: verifier,
+        redirect_uri: 'https://sp.example.com/callback',
+        sp_id: 'sp.example.com',
+      },
+      codeStore,
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(result.id_token, key.publicKey)
+    expect(payload.email).toBeUndefined()
+    expect(payload.name).toBeUndefined()
+  })
+})
+
+describe('issueAssertion', () => {
+  it('issues assertion without delegate by default', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n' },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.act).toBe('human')
+    expect(payload.delegate).toBeUndefined()
+  })
+
+  it('includes delegate claim when provided', async () => {
+    const keyStore = new InMemoryKeyStore()
+    const delegate: DDISADelegateClaim = {
+      sub: 'agent@idp.example.com',
+      act: 'agent',
+      grant_id: 'grant-456',
+    }
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n', delegate },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.sub).toBe('alice@example.com')
+    expect(payload.act).toBe('human')
+    expect(payload.delegate).toEqual(delegate)
+  })
+
+  it('includes email and name when provided', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n', email: 'alice@example.com', name: 'Alice' },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { payload } = await verifyJWT(assertion, key.publicKey)
+    expect(payload.email).toBe('alice@example.com')
+    expect(payload.name).toBe('Alice')
+  })
+
+  it('includes kid in JWT header', async () => {
+    const keyStore = new InMemoryKeyStore()
+
+    const assertion = await issueAssertion(
+      { sub: 'alice@example.com', aud: 'sp.example.com', nonce: 'n' },
+      keyStore,
+      'https://idp.example.com',
+    )
+
+    const key = await keyStore.getSigningKey()
+    const { protectedHeader } = await verifyJWT(assertion, key.publicKey)
+    expect(protectedHeader.kid).toBe(key.kid)
   })
 })

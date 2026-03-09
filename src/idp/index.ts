@@ -11,7 +11,7 @@ export {
   type KeyEntry,
   type KeyStore,
 } from './stores.js'
-export { handleTokenExchange, issueAssertion, type TokenExchangeParams, type TokenExchangeResult } from './token.js'
+export { handleTokenExchange, issueAssertion, type TokenExchangeParams, type TokenExchangeResult, type UserClaimsResolver } from './token.js'
 export {
   base64URLToUint8Array,
   type ChallengeStore,

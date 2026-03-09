@@ -1,4 +1,4 @@
-import type { ActorType } from '@openape/core'
+import type { ActorType, DDISADelegateClaim } from '@openape/core'
 import type { KeyLike } from 'jose'
 
 export interface CodeEntry {
@@ -10,6 +10,8 @@ export interface CodeEntry {
   nonce: string
   expiresAt: number
   act?: ActorType
+  delegate?: DDISADelegateClaim
+  scope?: string
 }
 
 export interface ConsentEntry {
