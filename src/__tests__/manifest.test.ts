@@ -3,14 +3,14 @@ import { createSPManifest, serveSPManifest } from '../sp/manifest.js'
 
 describe('sP Manifest', () => {
   const config = {
-    sp_id: 'sp.example.com',
+    client_id: 'sp.example.com',
     name: 'Example SP',
     redirect_uris: ['https://sp.example.com/callback'],
   }
 
   it('creates a manifest object', () => {
     const manifest = createSPManifest(config)
-    expect(manifest.sp_id).toBe('sp.example.com')
+    expect(manifest.client_id).toBe('sp.example.com')
     expect(manifest.name).toBe('Example SP')
   })
 

@@ -2,7 +2,7 @@ import type { PolicyMode } from '@openape/core'
 import type { ConsentStore } from './stores.js'
 
 export interface AuthorizeParams {
-  sp_id: string
+  client_id: string
   redirect_uri: string
   state: string
   code_challenge: string
@@ -17,7 +17,7 @@ export interface AuthorizeResult {
   /** If action is 'redirect', this contains the redirect URL with code */
   redirectUrl?: string
   /** SP info for consent screen */
-  spInfo?: { spId: string, redirectUri: string }
+  spInfo?: { clientId: string, redirectUri: string }
   /** Stored params for after auth/consent */
   params: AuthorizeParams
 }
@@ -32,7 +32,7 @@ export function validateAuthorizeRequest(params: AuthorizeParams): string | null
   if (params.code_challenge_method !== 'S256') {
     return 'Unsupported code_challenge_method. Must be "S256".'
   }
-  if (!params.sp_id || !params.redirect_uri || !params.state || !params.code_challenge || !params.nonce) {
+  if (!params.client_id || !params.redirect_uri || !params.state || !params.code_challenge || !params.nonce) {
     return 'Missing required parameters.'
   }
   return null
@@ -43,7 +43,7 @@ export function validateAuthorizeRequest(params: AuthorizeParams): string | null
  */
 export async function evaluatePolicy(
   mode: PolicyMode | undefined,
-  spId: string,
+  clientId: string,
   userId: string,
   consentStore: ConsentStore,
 ): Promise<'allow' | 'consent' | 'deny'> {
@@ -53,7 +53,7 @@ export async function evaluatePolicy(
     case 'deny':
       return 'deny'
     case 'allowlist-user': {
-      const hasConsent = await consentStore.hasConsent(userId, spId)
+      const hasConsent = await consentStore.hasConsent(userId, clientId)
       return hasConsent ? 'allow' : 'consent'
     }
     case 'allowlist-admin':

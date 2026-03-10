@@ -13,7 +13,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'test-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -27,7 +27,7 @@ describe('handleTokenExchange', () => {
         code: 'test-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -62,7 +62,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'kid-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -76,7 +76,7 @@ describe('handleTokenExchange', () => {
         code: 'kid-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -99,7 +99,7 @@ describe('handleTokenExchange', () => {
         code: 'invalid',
         code_verifier: 'v',
         redirect_uri: 'https://sp/cb',
-        sp_id: 'sp',
+        client_id: 'sp',
       },
       codeStore,
       keyStore,
@@ -115,7 +115,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'test-code',
-      spId: 'sp',
+      clientId: 'sp',
       redirectUri: 'https://sp/cb',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -129,7 +129,7 @@ describe('handleTokenExchange', () => {
         code: 'test-code',
         code_verifier: 'wrong-verifier',
         redirect_uri: 'https://sp/cb',
-        sp_id: 'sp',
+        client_id: 'sp',
       },
       codeStore,
       keyStore,
@@ -151,7 +151,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'delegate-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -166,7 +166,7 @@ describe('handleTokenExchange', () => {
         code: 'delegate-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -188,7 +188,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'scope-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -203,7 +203,7 @@ describe('handleTokenExchange', () => {
         code: 'scope-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -229,7 +229,7 @@ describe('handleTokenExchange', () => {
 
     await codeStore.save({
       code: 'no-scope-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -243,7 +243,7 @@ describe('handleTokenExchange', () => {
         code: 'no-scope-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -270,7 +270,7 @@ describe('authorization_details (RFC 9396)', () => {
 
     await codeStore.save({
       code: 'authz-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -285,7 +285,7 @@ describe('authorization_details (RFC 9396)', () => {
         code: 'authz-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -309,7 +309,7 @@ describe('authorization_details (RFC 9396)', () => {
 
     await codeStore.save({
       code: 'no-authz-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -323,7 +323,7 @@ describe('authorization_details (RFC 9396)', () => {
         code: 'no-authz-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -350,7 +350,7 @@ describe('authorization_details (RFC 9396)', () => {
 
     await codeStore.save({
       code: 'multi-authz',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -365,7 +365,7 @@ describe('authorization_details (RFC 9396)', () => {
         code: 'multi-authz',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -540,7 +540,7 @@ describe('issueAssertion', () => {
 
     await codeStore.save({
       code: 'delegation-code',
-      spId: 'bank.example.com',
+      clientId: 'bank.example.com',
       redirectUri: 'https://bank.example.com/callback',
       codeChallenge: challenge,
       userId: 'patrick@hofmann.eco',
@@ -556,7 +556,7 @@ describe('issueAssertion', () => {
         code: 'delegation-code',
         code_verifier: verifier,
         redirect_uri: 'https://bank.example.com/callback',
-        sp_id: 'bank.example.com',
+        client_id: 'bank.example.com',
       },
       codeStore,
       keyStore,

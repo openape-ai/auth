@@ -4,7 +4,7 @@ import type { KeyLike } from 'jose'
 
 export interface CodeEntry {
   code: string
-  spId: string
+  clientId: string
   redirectUri: string
   codeChallenge: string
   userId: string
@@ -22,7 +22,7 @@ export interface CodeEntry {
 
 export interface ConsentEntry {
   userId: string
-  spId: string
+  clientId: string
   grantedAt: number
 }
 
@@ -33,7 +33,7 @@ export interface CodeStore {
 }
 
 export interface ConsentStore {
-  hasConsent: (userId: string, spId: string) => Promise<boolean>
+  hasConsent: (userId: string, clientId: string) => Promise<boolean>
   save: (entry: ConsentEntry) => Promise<void>
 }
 
@@ -112,16 +112,16 @@ export class InMemoryCodeStore implements CodeStore {
 export class InMemoryConsentStore implements ConsentStore {
   private consents = new Map<string, ConsentEntry>()
 
-  private key(userId: string, spId: string): string {
-    return `${userId}:${spId}`
+  private key(userId: string, clientId: string): string {
+    return `${userId}:${clientId}`
   }
 
-  async hasConsent(userId: string, spId: string): Promise<boolean> {
-    return this.consents.has(this.key(userId, spId))
+  async hasConsent(userId: string, clientId: string): Promise<boolean> {
+    return this.consents.has(this.key(userId, clientId))
   }
 
   async save(entry: ConsentEntry): Promise<void> {
-    this.consents.set(this.key(entry.userId, entry.spId), entry)
+    this.consents.set(this.key(entry.userId, entry.clientId), entry)
   }
 }
 

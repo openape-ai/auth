@@ -12,13 +12,13 @@ describe('createAuthorizationURL', () => {
 
   it('generates a valid authorization URL', async () => {
     const result = await createAuthorizationURL(idpConfig, {
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
     })
 
     expect(result.url).toContain('https://idp.example.com/authorize?')
     expect(result.url).toContain('response_type=code')
-    expect(result.url).toContain('sp_id=sp.example.com')
+    expect(result.url).toContain('client_id=sp.example.com')
     expect(result.url).toContain('code_challenge_method=S256')
 
     expect(result.flowState.codeVerifier).toBeTruthy()
@@ -28,8 +28,8 @@ describe('createAuthorizationURL', () => {
   })
 
   it('generates unique state/nonce per call', async () => {
-    const r1 = await createAuthorizationURL(idpConfig, { spId: 'sp', redirectUri: 'https://sp/cb' })
-    const r2 = await createAuthorizationURL(idpConfig, { spId: 'sp', redirectUri: 'https://sp/cb' })
+    const r1 = await createAuthorizationURL(idpConfig, { clientId: 'sp', redirectUri: 'https://sp/cb' })
+    const r2 = await createAuthorizationURL(idpConfig, { clientId: 'sp', redirectUri: 'https://sp/cb' })
     expect(r1.flowState.state).not.toBe(r2.flowState.state)
     expect(r1.flowState.nonce).not.toBe(r2.flowState.nonce)
   })

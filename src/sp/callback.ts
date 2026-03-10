@@ -10,7 +10,7 @@ export interface HandleCallbackOptions {
   /** The stored flow state from the authorization request */
   flowState: AuthFlowState
   /** The SP ID */
-  spId: string
+  clientId: string
   /** The redirect URI (must match the one used in the auth request) */
   redirectUri: string
   /** Public key for assertion verification (alternative to JWKS) */
@@ -27,7 +27,7 @@ export interface CallbackResult {
  * Handle the callback from the IdP: exchange code, validate assertion.
  */
 export async function handleCallback(options: HandleCallbackOptions): Promise<CallbackResult> {
-  const { code, state, flowState, spId, redirectUri, publicKey } = options
+  const { code, state, flowState, clientId, redirectUri, publicKey } = options
 
   // 1. Validate state (CSRF protection)
   if (state !== flowState.state) {
@@ -44,7 +44,7 @@ export async function handleCallback(options: HandleCallbackOptions): Promise<Ca
       code,
       code_verifier: flowState.codeVerifier,
       redirect_uri: redirectUri,
-      sp_id: spId,
+      client_id: clientId,
     }),
   })
 
@@ -60,7 +60,7 @@ export async function handleCallback(options: HandleCallbackOptions): Promise<Ca
   const jwksUri = `${flowState.idpUrl}${WELL_KNOWN_JWKS}`
   const result = await validateAssertion(rawAssertion, {
     expectedIss: flowState.idpUrl,
-    expectedAud: spId,
+    expectedAud: clientId,
     jwksUri: publicKey ? undefined : jwksUri,
     publicKey,
     expectedNonce: flowState.nonce,

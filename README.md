@@ -88,7 +88,7 @@ interface KeyStore {
 
 ```typescript
 interface ConsentStore {
-  hasConsent(userId: string, spId: string): Promise<boolean>
+  hasConsent(userId: string, clientId: string): Promise<boolean>
   save(entry: ConsentEntry): Promise<void>
 }
 ```
@@ -139,7 +139,7 @@ const idpUrl = await resolveIdP('user@example.com'.split('@')[1])
 // 2. Build the authorization URL with PKCE
 const { authorizationUrl, codeVerifier, state, nonce } = await createAuthorizationURL({
   idpUrl,
-  spId: 'sp.example.com',
+  clientId: 'sp.example.com',
   redirectUri: 'https://sp.example.com/callback',
 })
 // → Redirect user to authorizationUrl
@@ -147,7 +147,7 @@ const { authorizationUrl, codeVerifier, state, nonce } = await createAuthorizati
 // 3. Handle the callback after user authenticates
 const { user } = await handleCallback(
   { code, state },
-  { codeVerifier, nonce, idpUrl, spId: 'sp.example.com', redirectUri: 'https://sp.example.com/callback' }
+  { codeVerifier, nonce, idpUrl, clientId: 'sp.example.com', redirectUri: 'https://sp.example.com/callback' }
 )
 // user.sub = 'user@example.com', user.act = 'human'
 ```

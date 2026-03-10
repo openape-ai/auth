@@ -9,7 +9,7 @@ import {
 } from '@openape/core'
 
 export interface CreateAuthURLOptions {
-  spId: string
+  clientId: string
   redirectUri: string
   email?: string
 }
@@ -33,7 +33,7 @@ export async function createAuthorizationURL(
 
   const params = new URLSearchParams({
     response_type: 'code',
-    sp_id: options.spId,
+    client_id: options.clientId,
     redirect_uri: options.redirectUri,
     state,
     code_challenge: codeChallenge,

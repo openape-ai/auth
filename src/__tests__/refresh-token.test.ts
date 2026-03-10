@@ -106,7 +106,7 @@ describe('handleTokenExchange with offline_access', () => {
 
     await codeStore.save({
       code: 'test-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -121,7 +121,7 @@ describe('handleTokenExchange with offline_access', () => {
         code: 'test-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,
@@ -144,7 +144,7 @@ describe('handleTokenExchange with offline_access', () => {
 
     await codeStore.save({
       code: 'test-code',
-      spId: 'sp.example.com',
+      clientId: 'sp.example.com',
       redirectUri: 'https://sp.example.com/callback',
       codeChallenge: challenge,
       userId: 'alice@example.com',
@@ -159,7 +159,7 @@ describe('handleTokenExchange with offline_access', () => {
         code: 'test-code',
         code_verifier: verifier,
         redirect_uri: 'https://sp.example.com/callback',
-        sp_id: 'sp.example.com',
+        client_id: 'sp.example.com',
       },
       codeStore,
       keyStore,

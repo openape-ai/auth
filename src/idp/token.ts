@@ -8,7 +8,7 @@ export interface TokenExchangeParams {
   code: string
   code_verifier: string
   redirect_uri: string
-  sp_id: string
+  client_id: string
 }
 
 export interface TokenExchangeResult {
@@ -47,9 +47,9 @@ export async function handleTokenExchange(
     throw new Error('Invalid or expired authorization code')
   }
 
-  // Validate SP ID
-  if (codeEntry.spId !== params.sp_id) {
-    throw new Error('SP ID mismatch')
+  // Validate client ID
+  if (codeEntry.clientId !== params.client_id) {
+    throw new Error('Client ID mismatch')
   }
 
   // Validate redirect URI
@@ -76,7 +76,7 @@ export async function handleTokenExchange(
   const assertion = await issueAssertion(
     {
       sub: codeEntry.userId,
-      aud: params.sp_id,
+      aud: params.client_id,
       nonce: codeEntry.nonce,
       act: codeEntry.act,
       delegate: codeEntry.delegate,
@@ -106,7 +106,7 @@ export async function handleTokenExchange(
   // Generate refresh token if offline_access scope requested
   const scopes = new Set((codeEntry.scope ?? '').split(/\s+/).filter(Boolean))
   if (scopes.has('offline_access') && refreshTokenStore) {
-    const { token } = await refreshTokenStore.create(codeEntry.userId, params.sp_id)
+    const { token } = await refreshTokenStore.create(codeEntry.userId, params.client_id)
     result.refresh_token = token
   }
 
