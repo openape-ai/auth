@@ -8,7 +8,7 @@ export interface CodeEntry {
   redirectUri: string
   codeChallenge: string
   userId: string
-  nonce: string
+  nonce?: string
   expiresAt: number
   act?: ActorType
   delegate?: DDISADelegateClaim

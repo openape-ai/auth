@@ -118,7 +118,7 @@ export async function handleTokenExchange(
 export interface AssertionClaimsInput {
   sub: string
   aud: string
-  nonce: string
+  nonce?: string
   act?: ActorType
   delegate?: DDISADelegateClaim
   email?: string
@@ -148,8 +148,8 @@ export async function issueAssertion(
     act: claims.delegation_act ?? claims.act ?? 'human',
     iat: now,
     exp: now + 300, // 5 minutes max
-    nonce: claims.nonce,
     jti: crypto.randomUUID(),
+    ...(claims.nonce ? { nonce: claims.nonce } : {}),
   }
 
   if (claims.delegation_grant) {

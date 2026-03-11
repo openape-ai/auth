@@ -7,7 +7,7 @@ export interface AuthorizeParams {
   state: string
   code_challenge: string
   code_challenge_method: string
-  nonce: string
+  nonce?: string
   response_type: string
   scope?: string
 }
@@ -32,7 +32,7 @@ export function validateAuthorizeRequest(params: AuthorizeParams): string | null
   if (params.code_challenge_method !== 'S256') {
     return 'Unsupported code_challenge_method. Must be "S256".'
   }
-  if (!params.client_id || !params.redirect_uri || !params.state || !params.code_challenge || !params.nonce) {
+  if (!params.client_id || !params.redirect_uri || !params.state || !params.code_challenge) {
     return 'Missing required parameters.'
   }
   return null
