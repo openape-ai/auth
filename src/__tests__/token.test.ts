@@ -86,7 +86,7 @@ describe('handleTokenExchange', () => {
     const key = await keyStore.getSigningKey()
     const { protectedHeader } = await verifyJWT(result.id_token, key.publicKey)
     expect(protectedHeader.kid).toBe(key.kid)
-    expect(protectedHeader.alg).toBe('ES256')
+    expect(protectedHeader.alg).toBe('EdDSA')
   })
 
   it('rejects invalid code', async () => {

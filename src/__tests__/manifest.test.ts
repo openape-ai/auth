@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { createSPManifest, serveSPManifest } from '../sp/manifest.js'
+import { createClientMetadata, serveClientMetadata } from '../sp/manifest.js'
 
-describe('sP Manifest', () => {
+describe('sP Client Metadata', () => {
   const config = {
     client_id: 'sp.example.com',
-    name: 'Example SP',
+    client_name: 'Example SP',
     redirect_uris: ['https://sp.example.com/callback'],
   }
 
-  it('creates a manifest object', () => {
-    const manifest = createSPManifest(config)
-    expect(manifest.client_id).toBe('sp.example.com')
-    expect(manifest.name).toBe('Example SP')
+  it('creates a client metadata object', () => {
+    const metadata = createClientMetadata(config)
+    expect(metadata.client_id).toBe('sp.example.com')
+    expect(metadata.client_name).toBe('Example SP')
   })
 
-  it('serves manifest as JSON response', () => {
-    const response = serveSPManifest(config)
+  it('serves client metadata as JSON response', () => {
+    const response = serveClientMetadata(config)
     expect(response.headers.get('Content-Type')).toBe('application/json')
   })
 })
